@@ -1,6 +1,6 @@
 import pytest
 from app import create_app
-from application.json_model_parser import parse_json_structures
+from application.json_parser import parse_json_structures
 
 json_full = '''
 {
@@ -47,11 +47,14 @@ expected_model = {
 }
 
 
+# Test parsing logic.
 @pytest.mark.parametrize("json_full_data, json_minimal_data, expected_output", [
     (json_full, json_minimal, expected_model)
 ])
 def test_json_model_parser(json_full_data: str, json_minimal_data: str, expected_output: dict):
     app = create_app()
+
+    # Define context to prevent Config generation error (request is needed).
     with app.test_request_context('/'):
         # Parse the JSON data
         parsed_structure = parse_json_structures(json_full_data, json_minimal_data)[0]

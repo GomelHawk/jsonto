@@ -19,7 +19,6 @@ parsed_model = {
     }
 }
 
-
 expected_php_classes = {
     'RootModel': '''<?php declare(strict_types=1);
 
@@ -54,7 +53,6 @@ final class Address {
 }
 '''
 }
-
 
 expected_java_classes = {
     'RootModel': '''public class RootModel {
@@ -131,6 +129,8 @@ class RootModel:
 '''
 }
 
+
+# Test classes generation for all languages.
 @pytest.mark.parametrize("language, expected_classes", [
     ("php", expected_php_classes),
     ("python", expected_python_classes),
@@ -138,6 +138,8 @@ class RootModel:
 ])
 def test_class_generator(language, expected_classes):
     app = create_app()
+
+    # Define context to prevent Config generation error (request is needed).
     with app.test_request_context('/'):
         # Initialize the ClassGenerator
         generator = ClassGenerator(parsed_model)

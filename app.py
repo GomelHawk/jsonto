@@ -1,11 +1,12 @@
 from flask import Flask, request, redirect, render_template, send_file, url_for
-from application.json_model_parser import parse_json_structures
+from application.json_parser import parse_json_structures
 from application.class_generator import ClassGenerator
 from time import time
 
 
 # flask --app app run --debug
 
+# Application factory.
 def create_app(test_config=None):
     app = Flask(__name__)
 

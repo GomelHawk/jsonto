@@ -2,6 +2,10 @@ from flask import request
 
 
 class Config:
+    """
+    Configuration class to store classes generation preferences.
+    """
+
     def __init__(self):
         self.common_with_prefixes = True if request.form.get("common_with_prefixes", None) == "enabled" else False
         self.php_jms_annotation = True if request.form.get("php_jms_annotation", None) == "enabled" else False

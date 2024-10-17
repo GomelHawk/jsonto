@@ -1,10 +1,9 @@
 import json
 import inflect
-
 from application.config import Config
 
 
-class JSONModelParser:
+class JSONParser:
     """
     Parse JSON object to the dictionary structure:
         key => model name
@@ -18,7 +17,7 @@ class JSONModelParser:
 
     @staticmethod
     def detect_type(value) -> str:
-        """Detect the data type of given value."""
+        """Detect the data type."""
         if isinstance(value, bool):
             return "bool"
         elif isinstance(value, int):
@@ -37,7 +36,7 @@ class JSONModelParser:
             elif all(isinstance(i, bool) for i in value):
                 return "array<bool>"
             elif all(isinstance(i, dict) for i in value):
-                return "array<object>"  # Handle this case separately for nested models
+                return "array<object>"
             else:
                 return "array<mixed>"
         elif isinstance(value, dict):
@@ -48,7 +47,7 @@ class JSONModelParser:
     def _merge_property(self, model_name: str, key: str, new_type: str, is_nullable: bool):
         """Merge a property into the existing model structure, handling type conflicts."""
         if key in self.models[model_name]:
-            # If the key exists, merge the types and update nullable status
+            # If the model exists, merge the types and update nullable status
             existing_type, existing_nullable, type_set = self.models[model_name][key]
             new_nullable = existing_nullable or is_nullable
 
@@ -62,11 +61,11 @@ class JSONModelParser:
                 type_set.add(new_type)
             self.models[model_name][key] = (existing_type, new_nullable, type_set)
         else:
-            # If it's a new property, just add it
+            # Add new model property
             self.models[model_name][key] = (new_type, is_nullable, {new_type})
 
     def parse_model(self, model_name: str, obj, minimized_obj):
-        """Parse a given object and update the model dictionary."""
+        """Parse a given object and update the model data."""
         if model_name not in self.models:
             self.models[model_name] = {}
 
@@ -87,6 +86,7 @@ class JSONModelParser:
                 if isinstance(first_element, dict):
                     sub_model_name = f"{model_name}{key.capitalize()}" if self.config.common_with_prefixes \
                         else key.capitalize()
+                    # Use inflect to create singular noun for the model name (in case list of elements)
                     sub_model_name_singular = inflect.engine().singular_noun(sub_model_name)
                     sub_model_name = sub_model_name_singular if sub_model_name_singular else sub_model_name
                     minimized_sub_obj = minimized_obj.get(key, [{}])
@@ -107,14 +107,12 @@ class JSONModelParser:
         return self.models
 
 
-# === Helper Functions ===
-
 def parse_json_structures(full_json_string: str, minimized_json_string: str) -> tuple:
     """
     Main function to parse and merge two JSON versions into a single model.
     Returns dictionary and error message in case error.
     """
-    parser = JSONModelParser()
+    parser = JSONParser()
 
     # Do nothing if main JSON is empty
     if full_json_string.split() == '':
@@ -124,11 +122,11 @@ def parse_json_structures(full_json_string: str, minimized_json_string: str) -> 
     minimized_json_string = full_json_string if minimized_json_string.strip() == '' else minimized_json_string
 
     try:
-        # Load the full and minimized JSON strings into Python dictionaries
+        # Load the full and minimized JSON
         full_json = json.loads(full_json_string)
         minimized_json = json.loads(minimized_json_string)
 
-        # Merge both structures into a single model
+        # Merge both structures into a single model data (dictionary)
         merged_models_dict = parser.merge_models(full_json, minimized_json)
 
         return merged_models_dict, None
