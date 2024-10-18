@@ -16,7 +16,7 @@ class JSONParser:
         self.base_types = {"int", "string", "bool", "float"}
 
     @staticmethod
-    def detect_type(value) -> str:
+    def detect_type(value) -> str:  # noqa: C901
         """Detect the data type."""
         if isinstance(value, bool):
             return "bool"
@@ -64,7 +64,7 @@ class JSONParser:
             # Add new model property
             self.models[model_name][key] = (new_type, is_nullable, {new_type})
 
-    def parse_model(self, model_name: str, obj, minimized_obj):
+    def parse_model(self, obj, minimized_obj, model_name: str = "RootModel") -> dict:
         """Parse a given object and update the model data."""
         if model_name not in self.models:
             self.models[model_name] = {}
@@ -78,7 +78,7 @@ class JSONParser:
                 sub_model_name = f"{model_name}{key.capitalize()}" if self.config.common_with_prefixes \
                     else key.capitalize()
                 minimized_sub_obj = minimized_obj.get(key, {})
-                self.parse_model(sub_model_name, value, minimized_sub_obj)
+                self.parse_model(value, minimized_sub_obj, sub_model_name)
                 current_type = sub_model_name
             elif detected_type == "array<object>" and isinstance(value, list) and len(value) > 0:
                 # Detect arrays of objects and create a nested model class for them
@@ -90,7 +90,7 @@ class JSONParser:
                     sub_model_name_singular = inflect.engine().singular_noun(sub_model_name)
                     sub_model_name = sub_model_name_singular if sub_model_name_singular else sub_model_name
                     minimized_sub_obj = minimized_obj.get(key, [{}])
-                    self.parse_model(sub_model_name, first_element, minimized_sub_obj[0])
+                    self.parse_model(first_element, minimized_sub_obj[0], sub_model_name)
                     current_type = f"array<{sub_model_name}>"
                 else:
                     current_type = "array<mixed>"
@@ -99,10 +99,6 @@ class JSONParser:
 
             # Merge this property into the model
             self._merge_property(model_name, key, current_type, is_nullable if value is not None else True)
-
-    def merge_models(self, full_json, minimized_json, root_model_name: str = "RootModel"):
-        """Merge the full structure and minimized structure JSONs into a single model dictionary."""
-        self.parse_model(root_model_name, full_json, minimized_json)
 
         return self.models
 
@@ -127,7 +123,7 @@ def parse_json_structures(full_json_string: str, minimized_json_string: str) -> 
         minimized_json = json.loads(minimized_json_string)
 
         # Merge both structures into a single model data (dictionary)
-        merged_models_dict = parser.merge_models(full_json, minimized_json)
+        merged_models_dict = parser.parse_model(full_json, minimized_json)
 
         return merged_models_dict, None
     except (json.JSONDecodeError, AttributeError):

@@ -45,7 +45,16 @@ pre[class*="language-php"],pre[class*="language-java"],pre[class*="language-pyth
     max-width: 100px;
     max-height: 100px;
 }
+.navbar-bottom {
+    background: lightgray;
+    color: white;
+    padding: 4px;
+    font-size: 12px;
+    height: 26px;
+    overflow: hidden;
+}
 footer {
+    border-top: 4px solid white;
     background-color: #f8f9fa;
     padding-top: 20px;
     text-align: center;

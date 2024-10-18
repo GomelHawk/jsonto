@@ -42,6 +42,9 @@
         </div>
     </div>
 </nav>
+<div class="navbar-bottom">
+    {% for i in range(12) %}&nbsp; CONVERT JSON TO {{ route.upper() }} MODELS &nbsp;•{% endfor %}
+</div>
 
 <!-- Main Content -->
 <div class="container textarea-container main-container">
@@ -105,7 +108,8 @@
                     <!-- Preview button -->
                     <div class="col-md-4 text-end">
                         <div class="center-button">
-                            <button class="btn btn-primary" name="action" value="preview" type="submit">Preview</button>
+                            <button class="btn btn-primary" name="action" value="preview" type="submit">Preview
+                            </button>
                         </div>
                     </div>
                     <div class="col-md-12 mt-4 mb-4">
