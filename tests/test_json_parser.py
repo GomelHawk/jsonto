@@ -46,10 +46,35 @@ expected_model = {
     }
 }
 
+json_mixed_nullable = '''
+{
+    "data": [
+        {
+            "type": 1
+        },
+        {
+            "type": "asd",
+            "option": true
+        }
+    ]
+}
+'''
+
+expected_model_mixed_nullable = {
+    'RootModel': {
+        'data': ('array<Datum>', False, {'array<Datum>'})
+    },
+    'Datum': {
+        'type': ('mixed', False, {'string', 'int'}),
+        'option': ('bool', True, {'bool'})
+    }
+}
+
 
 # Test parsing logic.
 @pytest.mark.parametrize("json_full_data, json_minimal_data, expected_output", [
-    (json_full, json_minimal, expected_model)
+    (json_full, json_minimal, expected_model),
+    (json_mixed_nullable, json_mixed_nullable, expected_model_mixed_nullable)
 ])
 def test_json_model_parser(json_full_data: str, json_minimal_data: str, expected_output: dict):
     app = create_app()

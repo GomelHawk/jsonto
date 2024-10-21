@@ -15,7 +15,8 @@ parsed_model = {
     },
     'Address': {
         'street': ('string', False, {'string'}),
-        'city': ('string', True, {'string'})
+        'city': ('string', True, {'string'}),
+        'code': ('mixed', False, {'int', 'string'}),
     }
 }
 
@@ -50,6 +51,7 @@ namespace App\\Model\\Address;
 final class Address {
     public string $street;
     public ?string $city;
+    public int|string $code;
 }
 '''
 }
@@ -72,6 +74,7 @@ expected_java_classes = {
     'Address': '''public class Address {
     public String street;
     public String city;
+    public String|int code;
 }
 '''
 }
@@ -86,13 +89,15 @@ from dataclasses import dataclass
 class Address:
     street: str
     city: Optional[str]
+    code: Any
 
     @staticmethod
     def from_dict(obj: Any) -> 'Address':
         _street = str(obj.get('street'))
         _city = str(obj.get('city'))
+        _code = obj.get('code')
         return Address(
-            _street, _city
+            _street, _city, _code
         )
 
 

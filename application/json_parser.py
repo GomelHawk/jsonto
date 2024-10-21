@@ -16,7 +16,7 @@ class JSONParser:
         self.base_types = {"int", "string", "bool", "float"}
 
     @staticmethod
-    def detect_type(value) -> str:  # noqa: C901
+    def detect_type(value) -> str:
         """Detect the data type."""
         if isinstance(value, bool):
             return "bool"
@@ -27,16 +27,10 @@ class JSONParser:
         elif isinstance(value, str):
             return "string"
         elif isinstance(value, list):
-            if all(isinstance(i, int) for i in value):
-                return "array<int>"
-            elif all(isinstance(i, str) for i in value):
-                return "array<string>"
-            elif all(isinstance(i, float) for i in value):
-                return "array<float>"
-            elif all(isinstance(i, bool) for i in value):
-                return "array<bool>"
-            elif all(isinstance(i, dict) for i in value):
-                return "array<object>"
+            # Handle arrays of objects and base types
+            detected_types = {JSONParser.detect_type(v) for v in value if v is not None}
+            if len(detected_types) == 1:
+                return f"array<{detected_types.pop()}>"
             else:
                 return "array<mixed>"
         elif isinstance(value, dict):
@@ -59,6 +53,11 @@ class JSONParser:
             # If the types differ, add both to the set of types
             if new_type != existing_type:
                 type_set.add(new_type)
+
+            # If there are multiple base types, set the main type as 'mixed'
+            if len(type_set) > 1 and (existing_type in self.base_types or new_type in self.base_types):
+                existing_type = 'mixed'
+
             self.models[model_name][key] = (existing_type, new_nullable, type_set)
         else:
             # Add new model property
@@ -70,7 +69,13 @@ class JSONParser:
             self.models[model_name] = {}
 
         for key, value in obj.items():
-            detected_type = self.detect_type(value) if value is not None else "mixed"
+            # If no value and the model exists, update nullable status
+            if value is None and key in self.models[model_name]:
+                existing_type, existing_nullable, type_set = self.models[model_name][key]
+                self._merge_property(model_name, key, existing_type, True)
+                continue
+
+            detected_type = self.detect_type(value)
             is_nullable = key not in minimized_obj  # Mark nullable if the key is not in minimized JSON
 
             if detected_type == "object" and isinstance(value, dict):
@@ -82,18 +87,17 @@ class JSONParser:
                 current_type = sub_model_name
             elif detected_type == "array<object>" and isinstance(value, list) and len(value) > 0:
                 # Detect arrays of objects and create a nested model class for them
-                first_element = value[0]
-                if isinstance(first_element, dict):
-                    sub_model_name = f"{model_name}{key.capitalize()}" if self.config.common_with_prefixes \
-                        else key.capitalize()
-                    # Use inflect to create singular noun for the model name (in case list of elements)
-                    sub_model_name_singular = inflect.engine().singular_noun(sub_model_name)
-                    sub_model_name = sub_model_name_singular if sub_model_name_singular else sub_model_name
-                    minimized_sub_obj = minimized_obj.get(key, [{}])
-                    self.parse_model(first_element, minimized_sub_obj[0], sub_model_name)
-                    current_type = f"array<{sub_model_name}>"
-                else:
-                    current_type = "array<mixed>"
+                sub_model_name = f"{model_name}{key.capitalize()}" if self.config.common_with_prefixes \
+                    else key.capitalize()
+                # Use inflect to create singular noun for the model name (in case list of elements)
+                sub_model_name_singular = inflect.engine().singular_noun(sub_model_name)
+                sub_model_name = sub_model_name_singular if sub_model_name_singular else sub_model_name
+                # Process each object in the array and merge its structure
+                for element in value:
+                    if isinstance(element, dict):
+                        minimized_sub_obj = minimized_obj.get(key, [{}])
+                        self.parse_model(element, minimized_sub_obj[0], sub_model_name)
+                current_type = f"array<{sub_model_name}>"
             else:
                 current_type = detected_type
 
