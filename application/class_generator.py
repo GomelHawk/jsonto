@@ -52,34 +52,56 @@ class ClassGenerator:
     @staticmethod
     def snake_case_to_camel_case(snake_name: str) -> str:
         """Convert snake case names to camel case."""
-        return snake_name[0] + snake_name.title().replace('_', '')[1:]
+        return snake_name[0].lower() + snake_name.title().replace('_', '')[1:]
 
     def _generate_php_class(self, class_name: str, properties: dict):
         """Generate a PHP class."""
         class_lines = [
             "<?php declare(strict_types=1);",
             "",
-            f"namespace App\\Model\\{class_name};",
-            "",
-            f"final class {class_name} {{"
+            f"namespace App\\Model;",
+            ""
         ]
+
+        if self.config.php_jms_annotation:
+            class_lines.append(f"use JMS\\Serializer\\Annotation as Serializer;")
+            class_lines.append("")
+
+        class_lines.append(f"final class {class_name}")
+        class_lines.append(f"{{")
 
         for prop, (prop_type, nullable, prop_types) in properties.items():
             php_prop = self.snake_case_to_camel_case(prop)
             php_type = self._map_to_php_type(prop_type) if prop_type != 'mixed' else self._map_to_php_type(prop_types)
-            nullable_prefix = '?' if nullable else ''
-            if "array" in prop_type:
-                php_type = "array"
-                class_lines.append(f"    /** @var {prop_type} */")
+
+            if self.config.php_old_version:
+                nullable_prefix = 'null|' if nullable else ''
+                class_lines.append(f"    /**")
+                class_lines.append(f"     * @var {nullable_prefix}{prop_type}")
                 if self.config.php_jms_annotation:
-                    class_lines.append(f"    #[\\JMS\\Serializer\\Annotation\\Type('{prop_type}')]")
-            if "mixed" in prop_type and self.config.php_jms_annotation:
-                class_lines.append(f"    #[\\JMS\\Serializer\\Annotation\\Type('{php_type}')]")
-            if self.config.php_jms_annotation:
-                class_lines.append(f"    #[\\JMS\\Serializer\\Annotation\\SerializedName('{prop}')]")
-            class_lines.append(f"    public {nullable_prefix}{php_type} ${php_prop};")
-            if self.config.php_jms_annotation:
+                    class_lines.append(f"     *")
+                    if "array" in prop_type:
+                        class_lines.append(f"     * @Serializer\\Type(\"{prop_type}\")")
+                    else:
+                        class_lines.append(f"     * @Serializer\\Type(\"{php_type}\")")
+                    class_lines.append(f"     * @Serializer\\SerializedName(\"{prop}\")")
+                class_lines.append(f"     */")
+                class_lines.append(f"    public ${php_prop};")
                 class_lines.append("")
+            else:
+                nullable_prefix = '?' if nullable else ''
+                if "array" in prop_type:
+                    php_type = "array"
+                    class_lines.append(f"    /** @var {prop_type} */")
+                    if self.config.php_jms_annotation:
+                        class_lines.append(f"    #[Serializer\\Type(\"{prop_type}\")]")
+                if "mixed" in prop_type and self.config.php_jms_annotation:
+                    class_lines.append(f"    #[Serializer\\Type(\"{php_type}\")]")
+                if self.config.php_jms_annotation:
+                    class_lines.append(f"    #[Serializer\\SerializedName(\"{prop}\")]")
+                class_lines.append(f"    public {nullable_prefix}{php_type} ${php_prop};")
+                if self.config.php_jms_annotation:
+                    class_lines.append("")
 
         class_lines.append("}")
 

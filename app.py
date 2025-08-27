@@ -1,6 +1,7 @@
 from flask import Flask, request, Response, redirect, render_template, send_file, url_for
 from application.json_parser import parse_json_structures
 from application.class_generator import ClassGenerator
+from datetime import datetime
 from time import time
 
 
@@ -47,6 +48,10 @@ def create_app(test_config=None):  # noqa: C901
                 return prepare_zip_response(generator, classes, 'py')
 
         return render_template("index.html", route="python", classes=classes, error=error)
+
+    @app.template_filter('current_year')
+    def current_year_filter(_):
+        return datetime.now().year
 
     def parse_classes(language: str) -> tuple:
         models, error = parse_json_structures(request.form["json_full"], request.form["json_min"])
