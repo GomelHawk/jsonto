@@ -1,18 +1,23 @@
 import re
 
 
+def smart_capitalize(word: str) -> str:
+    """Capitalize first letter without forcing rest lowercase."""
+    return word[:1].upper() + word[1:]
+
+
 def to_camel_case(name: str) -> str:
     """Convert name to camel case."""
     words = [w for w in re.split(r'[_\-\s]|(?=[A-Z])', name) if w]
     if not words:
         return ""
-    return words[0].lower() + ''.join(word.capitalize() for word in words[1:])
+    return words[0].lower() + ''.join(smart_capitalize(w) for w in words[1:])
 
 
 def to_pascal_case(name: str) -> str:
     """Convert name to pascal case."""
     words = [w for w in re.split(r'[_\-\s]|(?=[A-Z])', name) if w]
-    return ''.join(word.capitalize() for word in words)
+    return ''.join(smart_capitalize(w) for w in words)
 
 
 def to_snake_case(name: str) -> str:
