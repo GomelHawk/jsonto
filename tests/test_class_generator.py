@@ -200,22 +200,31 @@ final class Address
 
 expected_java_classes = {
     'RootModel': '''public class RootModel {
+    @JsonProperty("name")
     public String name;
+    @JsonProperty("age")
     public int age;
+    @JsonProperty("contact")
     public Contact contact;
+    @JsonProperty("addresses")
     public ArrayList<Address> addresses;
 }
 ''',
 
     'Contact': '''public class Contact {
+    @JsonProperty("email")
     public String email;
+    @JsonProperty("phone")
     public String phone;
 }
 ''',
 
     'Address': '''public class Address {
+    @JsonProperty("street")
     public String street;
+    @JsonProperty("city")
     public String city;
+    @JsonProperty("code")
     public String|int code;
 }
 '''

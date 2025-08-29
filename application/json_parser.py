@@ -1,6 +1,7 @@
 import json
 import inflect
 from application.config import Config
+from application.functions import to_pascal_case
 
 
 class JSONParser:
@@ -80,15 +81,15 @@ class JSONParser:
 
             if detected_type == "object" and isinstance(value, dict):
                 # Recursively parse nested objects (sub-models)
-                sub_model_name = f"{model_name}{key.capitalize()}" if self.config.common_with_prefixes \
-                    else key.capitalize()
+                sub_model_name = f"{model_name}{to_pascal_case(key)}" if self.config.common_with_prefixes \
+                    else to_pascal_case(key)
                 minimized_sub_obj = minimized_obj.get(key, {})
                 self.parse_model(value, minimized_sub_obj, sub_model_name)
                 current_type = sub_model_name
             elif detected_type == "array<object>" and isinstance(value, list) and len(value) > 0:
                 # Detect arrays of objects and create a nested model class for them
-                sub_model_name = f"{model_name}{key.capitalize()}" if self.config.common_with_prefixes \
-                    else key.capitalize()
+                sub_model_name = f"{model_name}{to_pascal_case(key)}" if self.config.common_with_prefixes \
+                    else to_pascal_case(key)
                 # Use inflect to create singular noun for the model name (in case list of elements)
                 sub_model_name_singular = inflect.engine().singular_noun(sub_model_name)
                 sub_model_name = sub_model_name_singular if sub_model_name_singular else sub_model_name

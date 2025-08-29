@@ -1,4 +1,5 @@
 from application.config import Config
+from application.functions import to_camel_case, to_pascal_case, to_snake_case
 
 
 class ClassGenerator:
@@ -49,11 +50,6 @@ class ClassGenerator:
 
         return zip_buffer
 
-    @staticmethod
-    def snake_case_to_camel_case(snake_name: str) -> str:
-        """Convert snake case names to camel case."""
-        return snake_name[0].lower() + snake_name.title().replace('_', '')[1:]
-
     def _generate_php_class(self, class_name: str, properties: dict):
         """Generate a PHP class."""
         class_lines = [
@@ -71,7 +67,7 @@ class ClassGenerator:
         class_lines.append(f"{{")
 
         for prop, (prop_type, nullable, prop_types) in properties.items():
-            php_prop = self.snake_case_to_camel_case(prop)
+            php_prop = to_camel_case(prop)
             php_type = self._map_to_php_type(prop_type) if prop_type != 'mixed' else self._map_to_php_type(prop_types)
 
             if self.config.php_old_version:
@@ -113,22 +109,25 @@ class ClassGenerator:
 
         if self.config.java_use_properties:
             for prop, (prop_type, nullable, prop_types) in properties.items():
+                java_prop = to_camel_case(prop)
                 java_type = self._map_to_java_type(prop_type) if prop_type != 'mixed' \
                     else self._map_to_java_type(prop_types)
                 class_lines.append(f"    @JsonProperty(\"{prop}\")")
-                class_lines.append(f"    public {java_type} get{prop.capitalize()}() {{")
-                class_lines.append(f"        return this.{prop};")
+                class_lines.append(f"    public {java_type} get{to_pascal_case(prop)}() {{")
+                class_lines.append(f"        return this.{java_prop};")
                 class_lines.append("    }}")
-                class_lines.append(f"    public void set{prop.capitalize()}({java_type} {prop}) {{")
-                class_lines.append(f"        this.{prop} = {prop};")
+                class_lines.append(f"    public void set{to_pascal_case(prop)}({java_type} {java_prop}) {{")
+                class_lines.append(f"        this.{java_prop} = {java_prop};")
                 class_lines.append("    }}")
-                class_lines.append(f"    {java_type} {prop};")
+                class_lines.append(f"    {java_type} {java_prop};")
                 class_lines.append("")
         else:
             for prop, (prop_type, nullable, prop_types) in properties.items():
+                java_prop = to_camel_case(prop)
                 java_type = self._map_to_java_type(prop_type) if prop_type != 'mixed' \
                     else self._map_to_java_type(prop_types)
-                class_lines.append(f"    public {java_type} {prop};")
+                class_lines.append(f"    @JsonProperty(\"{prop}\")")
+                class_lines.append(f"    public {java_type} {java_prop};")
 
         class_lines.append("}")
 
@@ -140,13 +139,14 @@ class ClassGenerator:
 
         # Generate class fields
         for prop_name, (prop_type, is_nullable, _) in properties.items():
+            python_prop = to_snake_case(prop_name)
             prop_type = self._map_to_python_type(prop_type)
             if is_nullable:
                 prop_type = f"Optional[{prop_type}]"
             elif prop_type.startswith("array<"):
                 prop_type = prop_type.replace("array<", "List[")[:-1] + "]"
 
-            lines.append(f"    {prop_name}: {prop_type}")
+            lines.append(f"    {python_prop}: {prop_type}")
 
         # Handle empty class
         if len(lines) == 1:
@@ -159,41 +159,42 @@ class ClassGenerator:
 
         # Create a mapping line for each property
         for prop_name, (prop_type, is_nullable, type_set) in properties.items():
+            python_prop = to_snake_case(prop_name)
             prop_type = self._map_to_python_type(prop_type)
             if "array<" in prop_type:
                 nested_type = prop_type[6:-1]  # Extract type from 'array<NestedType>'
                 from_dict_lines.append(
-                    f"        _{prop_name} = ["
+                    f"        _{python_prop} = ["
                     f"{nested_type}.from_dict(item) if isinstance(item, dict) "
                     f"else item for item in obj.get('{prop_name}', [])]"
                 )
             elif prop_type.startswith("Optional["):
                 actual_type = prop_type[9:-1]
                 if actual_type == "Any":
-                    from_dict_lines.append(f"        _{prop_name} = obj.get('{prop_name}', None)")
+                    from_dict_lines.append(f"        _{python_prop} = obj.get('{prop_name}', None)")
                 elif actual_type in ["str", "int", "float", "bool"]:
-                    from_dict_lines.append(f"        _{prop_name} = obj.get('{prop_name}', None)")
+                    from_dict_lines.append(f"        _{python_prop} = obj.get('{prop_name}', None)")
                 elif actual_type == "list":
-                    from_dict_lines.append(f"        _{prop_name} = [v for v in obj.get('{prop_name}')]")
+                    from_dict_lines.append(f"        _{python_prop} = [v for v in obj.get('{prop_name}')]")
                 elif actual_type in self.models:
                     from_dict_lines.append(
-                        f"        _{prop_name} = {actual_type}.from_dict(obj.get('{prop_name}')) "
-                        f"if obj.get('{prop_name}') is not None else None")
+                        f"        _{python_prop} = {actual_type}.from_dict(obj.get('{prop_name}')) "
+                        f"if obj.get('{python_prop}') is not None else None")
                 else:
-                    from_dict_lines.append(f"        _{prop_name} = obj.get('{prop_name}', None)")
+                    from_dict_lines.append(f"        _{python_prop} = obj.get('{prop_name}', None)")
             elif prop_type == "Any":
-                from_dict_lines.append(f"        _{prop_name} = obj.get('{prop_name}')")
+                from_dict_lines.append(f"        _{python_prop} = obj.get('{prop_name}')")
             elif prop_type in ["str", "int", "float", "bool"]:
-                from_dict_lines.append(f"        _{prop_name} = {prop_type}(obj.get('{prop_name}'))")
+                from_dict_lines.append(f"        _{python_prop} = {prop_type}(obj.get('{prop_name}'))")
             elif prop_type == "list":
-                from_dict_lines.append(f"        _{prop_name} = [v for v in obj.get('{prop_name}')]")
+                from_dict_lines.append(f"        _{python_prop} = [v for v in obj.get('{prop_name}')]")
             elif prop_type in self.models:
-                from_dict_lines.append(f"        _{prop_name} = {prop_type}.from_dict(obj.get('{prop_name}'))")
+                from_dict_lines.append(f"        _{python_prop} = {prop_type}.from_dict(obj.get('{prop_name}'))")
 
         # Join the mapped properties
         lines.extend(from_dict_lines)
         lines.append(f"        return {class_name}(")
-        lines.append(f"            {', '.join(f'_{prop_name}' for prop_name in properties.keys())}")
+        lines.append(f"            {', '.join(f'_{to_snake_case(prop_name)}' for prop_name in properties.keys())}")
         lines.append("        )")
 
         return "\n".join(lines)
