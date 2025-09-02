@@ -14,7 +14,7 @@ def create_app(test_config=None):  # noqa: C901
 
     @app.route("/")
     def index():
-        return redirect(url_for("php"))
+        return redirect(url_for("php"), 301)
 
     @app.route("/php", methods=['GET', 'POST'])
     def php():

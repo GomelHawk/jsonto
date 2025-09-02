@@ -12,7 +12,7 @@ def client():
 
 def test_home_page_redirect(client):
     response = client.get('/')
-    assert response.status_code == 302
+    assert response.status_code == 301
 
 
 def test_php_page(client):
